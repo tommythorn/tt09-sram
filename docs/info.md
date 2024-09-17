@@ -9,12 +9,15 @@ You can also include images in this folder and reference them in the markdown. E
 
 ## How it works
 
-Explain how your project works
+Instantiate a tiny 2x1b asynchronous SRAM
 
 ## How to test
 
-Explain how to use your project
+Frob the inputs and try to store and read all four possible state
+configurations.
+
 
 ## External hardware
 
-List external hardware used in your project (e.g. PMOD, LED display, etc), if any
+Nothing besides what's on the standard bring-up board from Tiny
+Tapeout

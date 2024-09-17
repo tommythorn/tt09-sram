@@ -1,5 +1,15 @@
 ![](../../workflows/gds/badge.svg) ![](../../workflows/docs/badge.svg) ![](../../workflows/test/badge.svg) ![](../../workflows/fpga/badge.svg)
 
+# A tiny sram
+
+This is a minimal SRAM to experiments with some implementation
+options.  In particular, we can try (sorted by size):
+
+- latches (size 12)
+- mux (size 9)
+- A22O (size 7)
+
+
 # Tiny Tapeout Verilog Project Template
 
 - [Read the documentation for project](docs/info.md)

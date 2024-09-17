@@ -33,6 +33,9 @@
 
   "//": "Configuration docs: https://openlane.readthedocs.io/en/latest/reference/configuration.html",
 
+  "//": "Skip synth checks, otherwise OpenLane 2 fails with 'ABC: Error: The network is combinational'",
+  "QUIT_ON_SYNTH_CHECKS": false,
+
   "//": "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!",
   "//": "!!! DO NOT CHANGE ANYTHING BELOW THIS POINT !!!",
   "//": "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!",
