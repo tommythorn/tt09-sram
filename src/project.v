@@ -4,8 +4,12 @@
  */
 
 `default_nettype none
+`define USE_A22O 1
+//`define USE_LATCH 1
+//`define USE_MUX 1
 
-module tt_um_tommythorn_tt09_sram (
+module tt_um_tommythorn_tt09_sram
+  #(parameter N = 7) (
     input  wire [7:0] ui_in,    // Dedicated inputs
     output wire [7:0] uo_out,   // Dedicated outputs
     input  wire [7:0] uio_in,   // IOs: Input path
@@ -17,30 +21,42 @@ module tt_um_tommythorn_tt09_sram (
 );
 
   // All output pins must be assigned. If not used, assign to 0.
-  assign uio_out = 0;
-  assign uio_oe  = 0;
+   assign uio_out = 0;
+   assign uio_oe  = 0;
 
-   // sram_latch sram_inst
-   // sram_mux sram_inst
-   sram_a22o7 sram_inst
-     (.wa(ui_in[0]),
-      .we(ui_in[1]),
-      .wd(ui_in[2]),
-      .ra(ui_in[3]),
-      .rd(uo_out[0]));
+   wire [N-1:0]	      ra = ui_in[N-1:0];
+   wire [N-1:0]	      wa = uio_in[N-1:0];
+   wire		      we = ui_in[7];
+   wire		      wd = uio_in[7];
+   wire		      rd;
+   assign uo_out[0] = rd;
+
+`ifdef USE_LATCH
+   sram_latch #(.N(N)) sram_inst
+`endif
+
+`ifdef USE_MUX
+   sram_mux #(.N(N)) sram_inst
+`endif
+
+`ifdef USE_A22O
+   sram_a22o #(.N(N)) sram_inst
+`endif
+     (.wa(wa), .we(we), .wd(wd), .ra(ra), .rd(rd));
 
   // List all unused inputs to prevent warnings
   wire _unused = &{ena, clk, rst_n, 1'b0};
 endmodule
 
-module sram_latch12
-  (input wire  wa,
-   input wire  we,
-   input wire  wd,
-   input wire  ra,
-   output wire rd);
+module sram_latch
+  #(parameter N = 0)
+  (input wire [N-1:0] wa,
+   input wire	       we,
+   input wire	       wd,
+   input wire [N-1:0] ra,
+   output wire	       rd);
 
-   reg	       mem[1:0];
+   reg mem[(1 << N)-1:0];
 
 `ifdef verilator
    always_latch @* if (we) mem[wa] = wd;
@@ -50,29 +66,37 @@ module sram_latch12
    assign rd = mem[ra];
 endmodule
 
-module sram_mux9
-  (input wire  wa,
+module sram_mux
+  #(parameter N = 0)
+  (input wire [N-1:0] wa,
    input wire  we,
    input wire  wd,
-   input wire  ra,
+   input wire [N-1:0] ra,
    output wire rd);
 
-   wire	       q0, q1;
-   sky130_fd_sc_hd__mux2_1 mux0 (.X(q0), .A0(q0), .A1(wd), .S(we && wa == 0));
-   sky130_fd_sc_hd__mux2_1 mux1 (.X(q1), .A0(q1), .A1(wd), .S(we && wa == 1));
-   assign rd = ra == 0 ? q0 : q1;
+   wire	       q[(1 << N)-1:0];
+   genvar      i;
+   generate
+      for (i = 0; i < 1 << N; i = i + 1)
+	sky130_fd_sc_hd__mux2_1 mux (.X(q[i]), .A0(q[i]), .A1(wd), .S(we && wa == i));
+   endgenerate
+   assign rd = q[ra];
 endmodule
 
-module sram_a22o7
-  (input wire  wa,
+module sram_a22o
+  #(parameter N = 0)
+  (input wire [N-1:0] wa,
    input wire  we,
    input wire  wd,
-   input wire  ra,
+   input wire [N-1:0] ra,
    output wire rd);
 
-   wire	       q0, q1;
-   sky130_fd_sc_hd__a22o_1 bit0( .X(q0), .A1(q0), .A2(we), .B1(wd), .B2(wa == 0));
-   sky130_fd_sc_hd__a22o_1 bit1( .X(q1), .A1(q1), .A2(we), .B1(wd), .B2(wa == 1));
-   assign rd = ra == 0 ? q0 : q1;
+   wire	       q[(1 << N)-1:0];
+   genvar      i;
+   generate
+      for (i = 0; i < 1 << N; i = i + 1)
+	sky130_fd_sc_hd__a22o_1 bit_i( .X(q[i]), .A1(q[i]), .A2(we), .B1(wd), .B2(wa == i));
+   endgenerate
+   assign rd = q[ra];
 endmodule
 
