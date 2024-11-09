@@ -4,13 +4,12 @@
  */
 
 `default_nettype none
-//`define USE_A22O 1
-`define USE_LATCH 1
-//`define USE_MUX 1
+//`define USE_LATCH 1
+`define USE_MUX 1
 
 module tt_um_tommythorn_tt09_sram
-  #(parameter N = 6,
-    parameter W = 64) (
+  #(parameter N = 4,
+    parameter W = 1) (
     input  wire [7:0] ui_in,    // Dedicated inputs
     output wire [7:0] uo_out,   // Dedicated outputs
     input  wire [7:0] uio_in,   // IOs: Input path
@@ -25,12 +24,25 @@ module tt_um_tommythorn_tt09_sram
    assign uio_out = 0;
    assign uio_oe  = 0;
 
-   wire [N-1:0]	      ra = ui_in[N-1:0];
-   wire [N-1:0]	      wa = uio_in[N-1:0];
-   wire		      we = ui_in[7];
-   wire	[W-1:0]	      wd = uio_in[7];
-   wire	[W-1:0]	      rd;
-   assign uo_out         = rd[7:0];
+   wire	[W-1:0]	      rd_w;
+   //assign uo_out = rd[7:0] ^ rd[15:8] ^ rd[23:16] ^ rd[31:24];
+   assign uo_out = rd[0];
+
+   reg  [N-1:0]	      ra;
+   reg  [N-1:0]	      wa;
+   reg 		      we;
+   reg 	[W-1:0]	      wd;
+   reg 	[W-1:0]	      rd;
+
+   always @(posedge clk) begin
+      ra <= ui_in[N-1:0];
+      wa <= uio_in[N-1:0];
+      we <= ui_in[7];
+      wd <= {rd[W-9:0], uio_in ^ ui_in};
+      rd <= rd_w;
+   end
+
+
 
 `ifdef USE_LATCH
    sram_latch
@@ -41,15 +53,15 @@ module tt_um_tommythorn_tt09_sram
 `endif
 
 `ifdef USE_A22O
-     XXX this is totally borked
    sram_a22o
 `endif
-     #(.N(N), .W(W)) sram_inst(.wa(wa), .we(we), .wd({rd[W-8:0],ui_in}), .ra(ra), .rd(rd));
+     #(.N(N), .W(W)) sram_inst(.wa(wa), .we(we & !clk), .wd(wd), .ra(ra), .rd(rd_w));
 
   // List all unused inputs to prevent warnings
   wire _unused = &{ena, clk, rst_n, 1'b0, ui_in, uio_in};
 endmodule
 
+`ifdef USE_LATCH
 module sram_latch
   #(parameter N = 0,
     parameter W = 1)
@@ -68,7 +80,9 @@ module sram_latch
 `endif
    assign rd = mem[ra];
 endmodule
+`endif
 
+`ifdef USE_MUX
 module sram_mux
   #(parameter N = 0,
     parameter W = 1)
@@ -88,29 +102,4 @@ module sram_mux
    endgenerate
    assign rd = q[ra];
 endmodule
-
-// XXX My idea to use A22O doesn't seem to work
-// I think we need
-// Q = we && addr == i ? wd : Q
-// which implies a mux or a latch
-// Question is why a latch would be larger?
-module sram_a22o
-  #(parameter N = 0,
-    parameter W = 1)
-  (input wire  [N-1:0] wa,
-   input wire          we,
-   input wire  [W-1:0] wd,
-   input wire  [N-1:0] ra,
-   output wire [W-1:0] rd);
-
-   wire	[W-1:0] q[(1 << N)-1:0];
-   genvar      i, j;
-   generate
-      for (i = 0; i < 1 << N; i = i + 1)
-	for (j = 0; j < W; j = j + 1)
-	  // Q = Q & !we && addr == i | we && wd && addr == i
-	  // thus, Q = we && addr == i ? wd : Q
-	  sky130_fd_sc_hd__a22o_1 bit_i( .X(q[i][j]), .A1(q[i][j]), .A2(!we), .B1(wd[j]), .B2(we && wa == i));
-   endgenerate
-   assign rd = q[ra];
-endmodule
+`endif
